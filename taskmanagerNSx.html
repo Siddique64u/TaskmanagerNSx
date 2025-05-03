@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Tasks Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        priority: {
+                            red: '#ef4444',
+                            yellow: '#eab308',
+                            green: '#22c55e'
+                        }
+                    }
+                }
+            },
+            darkMode: 'class'
+        }
+    </script>
+</head>
+<body class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
+    <!-- Dark mode detection -->
+    <script>
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+    </script>
+
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-primary mb-6">Task Brainstorm - Neurosurgery AIIMS</h1>
+        
+        <!-- Task Entry Form -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Add New Task</h2>
+            <form id="taskForm" class="space-y-4">
+                <!-- Ward Selection -->
+                <div>
+                    <label for="ward" class="block text-sm font-medium mb-1">Ward</label>
+                    <select id="ward" name="ward" class="w-full p-2 border rounded-md bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base" required>
+                        <option value="" disabled selected>Select Ward</option>
+                        <option value="NS3">NS3</option>
+                        <option value="CNT">CNT</option>
+                        <option value="ICU">ICU</option>
+                        <option value="Periphery">Periphery</option>
+                    </select>
+                </div>
+
+                <!-- Bed Number & Patient Name -->
+                <div>
+                    <label for="bedNo" class="block text-sm font-medium mb-1">Bed Number & Name (if bed exchanged recently)</label>
+                    <div id="bedInputContainer" class="flex flex-col md:flex-row gap-2">
+                        <!-- Bed input will be dynamically inserted here based on ward selection -->
+                        <div class="md:w-1/2">
+                            <input type="text" id="bedNo" name="bedNo" placeholder="Select ward first" class="w-full p-2 border rounded-md bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base" disabled>
+                        </div>
+                        <div class="md:w-1/2">
+                            <input type="text" id="patientName" name="patientName" placeholder="Patient name (optional)" class="w-full p-2 border rounded-md bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Task Selection -->
+                <div>
+                    <label class="block text-sm font-medium mb-1">Task related to (with priority)</label>
+                    <div class="flex flex-col gap-3">
+                        <div class="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-3">
+                            <p class="text-sm mb-2">Select tasks (in order of priority):</p>
+                            <div id="taskCheckboxes" class="space-y-2">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="task-sampling" name="taskTypes" value="Sampling" class="mr-2">
+                                    <label for="task-sampling" class="mr-2">Sampling</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="task-dressing" name="taskTypes" value="Dressing" class="mr-2">
+                                    <label for="task-dressing" class="mr-2">Dressing</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="task-ct" name="taskTypes" value="CT" class="mr-2">
+                                    <label for="task-ct" class="mr-2">CT</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="task-blood" name="taskTypes" value="Blood Arrange" class="mr-2">
+                                    <label for="task-blood" class="mr-2">Blood Arrange</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="task-ot" name="taskTypes" value="OT List" class="mr-2">
+                                    <label for="task-ot" class="mr-2">OT List</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="task-misc" name="taskTypes" value="Miscellaneous" class="mr-2">
+                                    <label for="task-misc" class="mr-2">Miscellaneous</label>
+                                </div>
+                            </div>
+                            <div id="taskSelectionOrder" class="mt-3 text-sm text-gray-600 dark:text-gray-300 hidden">
+                                Selected tasks: <span id="selectedTasksPreview"></span>
+                            </div>
+                        </div>
+                        <textarea id="taskDetails" name="taskDetails" placeholder="Enter task details" rows="3" class="w-full p-2 border rounded-md bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base resize-none"></textarea>
+                    </div>
+                </div>
+
+                <!-- Priority Selection -->
+                <div>
+                    <label class="block text-sm font-medium mb-1">Priority</label>
+                    <div class="flex flex-wrap gap-3">
+                        <label class="flex items-center">
+                            <input type="radio" name="priority" value="red" class="hidden peer" required>
+                            <span class="px-4 py-2 rounded-md bg-red-100 text-red-800 border-2 border-red-200 peer-checked:bg-red-500 peer-checked:text-white peer-checked:border-red-700 cursor-pointer dark:bg-red-900/30 dark:text-red-300 dark:border-red-800 dark:peer-checked:bg-red-700 dark:peer-checked:text-white">
+                                Red (Urgent)
+                            </span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="priority" value="yellow" class="hidden peer">
+                            <span class="px-4 py-2 rounded-md bg-yellow-100 text-yellow-800 border-2 border-yellow-200 peer-checked:bg-yellow-500 peer-checked:text-white peer-checked:border-yellow-700 cursor-pointer dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800 dark:peer-checked:bg-yellow-700 dark:peer-checked:text-white">
+                                Yellow (Medium)
+                            </span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="priority" value="green" class="hidden peer">
+                            <span class="px-4 py-2 rounded-md bg-green-100 text-green-800 border-2 border-green-200 peer-checked:bg-green-500 peer-checked:text-white peer-checked:border-green-700 cursor-pointer dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 dark:peer-checked:bg-green-700 dark:peer-checked:text-white">
+                                Green (Low)
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- ETA Selection -->
+                <div>
+                    <label class="block text-sm font-medium mb-1">ETA (Expected timerange to Accomplish)</label>
+                    <div class="flex flex-wrap gap-3">
+                        <label class="flex items-center">
+                            <input type="radio" name="eta" value="5-10min" class="hidden peer" required>
+                            <span class="px-4 py-2 rounded-md bg-gray-100 text-gray-800 border-2 border-gray-200 peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary/70 cursor-pointer dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:peer-checked:bg-primary dark:peer-checked:border-primary/70">
+                                5-10min
+                            </span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="eta" value="10-20min" class="hidden peer">
+                            <span class="px-4 py-2 rounded-md bg-gray-100 text-gray-800 border-2 border-gray-200 peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary/70 cursor-pointer dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:peer-checked:bg-primary dark:peer-checked:border-primary/70">
+                                10-20min
+                            </span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="eta" value="30-60min" class="hidden peer">
+                            <span class="px-4 py-2 rounded-md bg-gray-100 text-gray-800 border-2 border-gray-200 peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary/70 cursor-pointer dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:peer-checked:bg-primary dark:peer-checked:border-primary/70">
+                                30-60min
+                            </span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="eta" value="1-2hrs" class="hidden peer">
+                            <span class="px-4 py-2 rounded-md bg-gray-100 text-gray-800 border-2 border-gray-200 peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary/70 cursor-pointer dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:peer-checked:bg-primary dark:peer-checked:border-primary/70">
+                                1-2hrs
+                            </span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="eta" value=">2hrs" class="hidden peer">
+                            <span class="px-4 py-2 rounded-md bg-gray-100 text-gray-800 border-2 border-gray-200 peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary/70 cursor-pointer dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:peer-checked:bg-primary dark:peer-checked:border-primary/70">
+                                >2hrs
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- File Upload -->
+                <div>
+                    <label class="block text-sm font-medium mb-1">Attach Image or File (Optional)</label>
+                    <input type="file" id="taskAttachment" name="taskAttachment" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90 cursor-pointer">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Upload an image or document related to this task</p>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="bg-primary hover:bg-primary/90 text-white font-semibold px-6 py-2 rounded-md transition duration-200">
+                    Add Task
+                </button>
+            </form>
+        </div>
+
+        <!-- Tasks Display -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-4">
+                <h2 class="text-xl font-semibold">Task List</h2>
+                
+                <!-- Priority Summary Section -->
+                <div id="prioritySummary" class="flex flex-wrap gap-3 order-3 md:order-2">
+                    <!-- This will be dynamically populated -->
+                </div>
+                
+                <div class="order-2 md:order-3">
+                    <label for="filterPriority" class="mr-2 text-sm">Filter by:</label>
+                    <select id="filterPriority" class="p-1 border rounded-md bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
+                        <option value="all">All Tasks</option>
+                        <option value="red">Red (Urgent)</option>
+                        <option value="yellow">Yellow (Medium)</option>
+                        <option value="green">Green (Low)</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Task Container Instructions -->
+            <div id="dragInstructions" class="mb-4 text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/80 p-2 rounded-md">
+                <p><i class="text-primary">Tip:</i> Drag and drop tasks to reorder them within their priority group</p>
+            </div>
+
+            <div id="taskContainer" class="space-y-6">
+                <!-- Tasks will be dynamically inserted here -->
+                <div id="noTasksMessage" class="text-center py-6 text-gray-500 dark:text-gray-400">
+                    No tasks added yet. Add a task using the form above.
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal for viewing attachments -->
+        <div id="attachmentModal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-11/12 max-h-[90vh] overflow-auto">
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <h3 class="font-semibold text-lg" id="modalTitle">View Attachment</h3>
+                    <button id="closeModal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-4" id="modalContent">
+                    <!-- Attachment will be shown here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal for editing tasks -->
+        <div id="editTaskModal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-11/12 max-h-[90vh] overflow-auto">
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <h3 class="font-semibold text-lg" id="editModalTitle">Edit Task</h3>
+                    <button id="closeEditModal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-4" id="editModalContent">
+                    <form id="editTaskForm" class="space-y-4">
+                        <input type="hidden" id="editTaskId">
+                        
+                        <!-- Ward Selection -->
+                        <div>
+                            <label for="editWard" class="block text-sm font-medium mb-1">Ward</label>
+                            <select id="editWard" name="editWard" class="w-full p-2 border rounded-md bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base" required>
+                                <option value="NS3">NS3</option>
+                                <option value="CNT">CNT</option>
+                                <option value="ICU">ICU</option>
+                                <option value="Periphery">Periphery</option>
+                            </select>
+                        </div>
+
+                        <!-- Bed Number & Patient Name -->
+                        <div>
+                            <label for="editBedNo" class="block text-sm font-medium mb-1">Bed Number & Name (if bed exchanged recently)</label>
+                            <div class="flex flex-col md:flex-row gap-2">
+                                <div class="md:w-1/2">
+                                    <input type="text" id="editBedNo" name="editBedNo" placeholder="Bed number" class="w-full p-2 border rounded-md bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base" required>
+                                </div>
+                                <div class="md:w-1/2">
+                                    <input type="text" id="editPatientName" name="editPatientName" placeholder="Patient name (optional)" class="w-full p-2 border rounded-md bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Task Selection -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Task related to (with priority)</label>
+                            <div class="flex flex-col gap-3">
+                                <div class="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-3">
+                                    <p class="text-sm mb-2">Select tasks (in order of priority):</p>
+                                    <div id="editTaskCheckboxes" class="space-y-2">
+                                        <div class="flex items-center">
+                                            <input type="checkbox" id="edit-task-sampling" name="editTaskTypes" value="Sampling" class="mr-2">
+                                            <label for="edit-task-sampling" class="mr-2">Sampling</label>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" id="edit-task-dressing" name="editTaskTypes" value="Dressing" class="mr-2">
+                                            <label for="edit-task-dressing" class="mr-2">Dressing</label>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" id="edit-task-ct" name="editTaskTypes" value="CT" class="mr-2">
+                                            <label for="edit-task-ct" class="mr-2">CT</label>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" id="edit-task-blood" name="editTaskTypes" value="Blood Arrange" class="mr-2">
+                                            <label for="edit-task-blood" class="mr-2">Blood Arrange</label>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" id="edit-task-ot" name="editTaskTypes" value="OT List" class="mr-2">
+                                            <label for="edit-task-ot" class="mr-2">OT List</label>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" id="edit-task-misc" name="editTaskTypes" value="Miscellaneous" class="mr-2">
+                                            <label for="edit-task-misc" class="mr-2">Miscellaneous</label>
+                                        </div>
+                                    </div>
+                                    <div id="editTaskSelectionOrder" class="mt-3 text-sm text-gray-600 dark:text-gray-300 hidden">
+                                        Selected tasks: <span id="editSelectedTasksPreview"></span>
+                                    </div>
+                                </div>
+                                <textarea id="editTaskDetails" name="editTaskDetails" placeholder="Enter task details" rows="3" class="w-full p-2 border rounded-md bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base resize-none"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Priority Selection -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Priority</label>
+                            <div class="flex flex-wrap gap-3">
+                                <label class="flex items-center">
+                                    <input type="radio" name="editPriority" value="red" class="hidden peer" required>
+                                    <span class="px-4 py-2 rounded-md bg-red-100 text-red-800 border-2 border-red-200 peer-checked:bg-red-500 peer-checked:text-white peer-checked:border-red-700 cursor-pointer dark:bg-red-900/30 dark:text-red-300 dark:border-red-800 dark:peer-checked:bg-red-700 dark:peer-checked:text-white">
+                                        Red (Urgent)
+                                    </span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="editPriority" value="yellow" class="hidden peer">
+                                    <span class="px-4 py-2 rounded-md bg-yellow-100 text-yellow-800 border-2 border-yellow-200 peer-checked:bg-yellow-500 peer-checked:text-white peer-checked:border-yellow-700 cursor-pointer dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800 dark:peer-checked:bg-yellow-700 dark:peer-checked:text-white">
+                                        Yellow (Medium)
+                                    </span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="editPriority" value="green" class="hidden peer">
+                                    <span class="px-4 py-2 rounded-md bg-green-100 text-green-800 border-2 border-green-200 peer-checked:bg-green-500 peer-checked:text-white peer-checked:border-green-700 cursor-pointer dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 dark:peer-checked:bg-green-700 dark:peer-checked:text-white">
+                                        Green (Low)
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- ETA Selection -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1">ETA (Expected timerange to Accomplish)</label>
+                            <div class="flex flex-wrap gap-3">
+                                <label class="flex items-center">
+                                    <input type="radio" name="editEta" value="5-10min" class="hidden peer" required>
+                                    <span class="px-4 py-2 rounded-md bg-gray-100 text-gray-800 border-2 border-gray-200 peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary/70 cursor-pointer dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:peer-checked:bg-primary dark:peer-checked:border-primary/70">
+                                        5-10min
+                                    </span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="editEta" value="10-20min" class="hidden peer">
+                                    <span class="px-4 py-2 rounded-md bg-gray-100 text-gray-800 border-2 border-gray-200 peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary/70 cursor-pointer dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:peer-checked:bg-primary dark:peer-checked:border-primary/70">
+                                        10-20min
+                                    </span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="editEta" value="30-60min" class="hidden peer">
+                                    <span class="px-4 py-2 rounded-md bg-gray-100 text-gray-800 border-2 border-gray-200 peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary/70 cursor-pointer dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:peer-checked:bg-primary dark:peer-checked:border-primary/70">
+                                        30-60min
+                                    </span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="editEta" value="1-2hrs" class="hidden peer">
+                                    <span class="px-4 py-2 rounded-md bg-gray-100 text-gray-800 border-2 border-gray-200 peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary/70 cursor-pointer dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:peer-checked:bg-primary dark:peer-checked:border-primary/70">
+                                        1-2hrs
+                                    </span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="editEta" value=">2hrs" class="hidden peer">
+                                    <span class="px-4 py-2 rounded-md bg-gray-100 text-gray-800 border-2 border-gray-200 peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary/70 cursor-pointer dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:peer-checked:bg-primary dark:peer-checked:border-primary/70">
+                                        >2hrs
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 flex justify-end">
+                            <button type="button" id="cancelEditBtn" class="mr-2 px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600">
+                                Cancel
+                            </button>
+                            <button type="submit" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90">
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize task data array
+        let tasks = [];
+        
+        // Selected task types in order
+        let selectedTaskTypes = [];
+        let editSelectedTaskTypes = [];
+        
+        // Estimated completion times (in minutes) for different task types
+        const taskTimes = {
+            'Sampling': 10,
+            'Dressing': 15,
+            'CT': 30,
+            'Blood Arrange': 20,
+            'OT List': 25,
+            'Miscellaneous': 20
+        };
+        
+        // Format date for display
+        function formatDate(date) {
+            if (!(date instanceof Date)) {
+                return "Unknown";
+            }
+            
+            const now = new Date();
+            const isToday = date.toDateString() === now.toDateString();
+            
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            const timeStr = `${hours}:${minutes}`;
+            
+            if (isToday) {
+                return `Today at ${timeStr}`;
+            } else {
+                const day = date.getDate();
+                const month = date.toLocaleString('default', { month: 'short' });
+                return `${day} ${month} at ${timeStr}`;
+            }
+        }
+        
+        // Function to format time in minutes to human-readable format
+        function formatTimeRange(minutes) {
+            if (minutes <= 0) return '0min';
+            if (minutes < 60) return `${minutes}min`;
+            
+            const hours = Math.floor(minutes / 60);
+            const remainingMinutes = minutes % 60;
+            
+            if (remainingMinutes === 0) {
+                return `${hours}hr${hours > 1 ? 's' : ''}`;
+            } else {
+                return `${hours}hr${hours > 1 ? 's' : ''} ${remainingMinutes}min`;
+            }
+        }
+
+        // DOM elements
+        const taskForm = document.getElementById('taskForm');
+        const wardSelect = document.getElementById('ward');
+        const bedInputContainer = document.getElementById('bedInputContainer');
+        const taskContainer = document.getElementById('taskContainer');
+        const filterPriority = document.getElementById('filterPriority');
+
+        // Handle ward selection to update bed number options
+        wardSelect.addEventListener('change', function() {
+            const selectedWard = this.value;
+            let bedInput = '';
+
+            let bedSelect = '';
+            switch(selectedWard) {
+                case 'NS3':
+                    bedSelect = `
+                        <select id="bedNo" name="bedNo" class="w-full p-2 border rounded-md bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base" required>
+                            <option value="" disabled selected>Select Bed</option>
+                            ${Array.from({length: 31}, (_, i) => `<option value="${i+1}">${i+1}</option>`).join('')}
+                            <option value="iso 1">iso 1</option>
+                            <option value="iso 2a">iso 2a</option>
+                            <option value="iso 2b">iso 2b</option>
+                        </select>
+                    `;
+                    break;
+                case 'ICU':
+                    bedSelect = `
+                        <select id="bedNo" name="bedNo" class="w-full p-2 border rounded-md bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base" required>
+                            <option value="" disabled selected>Select Bed</option>
+                            ${Array.from({length: 15}, (_, i) => `<option value="${i+1}">${i+1}</option>`).join('')}
+                        </select>
+                    `;
+                    break;
+                case 'CNT':
+                case 'Periphery':
+                    bedSelect = `
+                        <input type="text" id="bedNo" name="bedNo" placeholder="Enter bed number" class="w-full p-2 border rounded-md bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base" required>
+                    `;
+                    break;
+                default:
+                    bedSelect = `
+                        <input type="text" id="bedNo" name="bedNo" placeholder="Select ward first" class="w-full p-2 border rounded-md bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base" disabled>
+                    `;
+            }
+
+            // Preserve the patient name if it was entered
+            const patientNameInput = document.getElementById('patientName');
+            const patientNameValue = patientNameInput ? patientNameInput.value : '';
+            
+            bedInputContainer.innerHTML = `
+                <div class="md:w-1/2">
+                    ${bedSelect}
+                </div>
+                <div class="md:w-1/2">
+                    <input type="text" id="patientName" name="patientName" placeholder="Patient name (optional)" class="w-full p-2 border rounded-md bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base" value="${patientNameValue}">
+                </div>
+            `;
+        });
+
+        // Function to get the selected radio value
+        function getSelectedRadioValue(name) {
+            const radioButtons = document.getElementsByName(name);
+            for (const radioButton of radioButtons) {
+                if (radioButton.checked) {
+                    return radioButton.value;
+                }
+            }
+            return null;
+        }
+
+        // Set up checkbox event listeners to track selection order
+        const taskCheckboxes = document.querySelectorAll('input[name="taskTypes"]');
+        taskCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const taskType = this.value;
+                const taskSelectionOrder = document.getElementById('taskSelectionOrder');
+                const selectedTasksPreview = document.getElementById('selectedTasksPreview');
+                
+                if (this.checked) {
+                    // Add to selected types in order
+                    selectedTaskTypes.push(taskType);
+                } else {
+                    // Remove from selected types
+                    const index = selectedTaskTypes.indexOf(taskType);
+                    if (index !== -1) {
+                        selectedTaskTypes.splice(index, 1);
+                    }
+                }
+                
+                // Update the preview text
+                if (selectedTaskTypes.length > 0) {
+                    selectedTasksPreview.textContent = selectedTaskTypes.join(' → ');
+                    taskSelectionOrder.classList.remove('hidden');
+                } else {
+                    taskSelectionOrder.classList.add('hidden');
+                }
+            });
+        });
+        
+        // Set up checkbox event listeners for edit form
+        const editTaskCheckboxes = document.querySelectorAll('input[name="editTaskTypes"]');
+        editTaskCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const taskType = this.value;
+                const taskSelectionOrder = document.getElementById('editTaskSelectionOrder');
+                const selectedTasksPreview = document.getElementById('editSelectedTasksPreview');
+                
+                if (this.checked) {
+                    // Add to selected types in order
+                    editSelectedTaskTypes.push(taskType);
+                } else {
+                    // Remove from selected types
+                    const index = editSelectedTaskTypes.indexOf(taskType);
+                    if (index !== -1) {
+                        editSelectedTaskTypes.splice(index, 1);
+                    }
+                }
+                
+                // Update the preview text
+                if (editSelectedTaskTypes.length > 0) {
+                    selectedTasksPreview.textContent = editSelectedTaskTypes.join(' → ');
+                    taskSelectionOrder.classList.remove('hidden');
+                } else {
+                    taskSelectionOrder.classList.add('hidden');
+                }
+            });
+        });
+        
+        // Function to add a new task
+        taskForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const ward = wardSelect.value;
+            const bedNo = document.getElementById('bedNo').value;
+            const taskDetails = document.getElementById('taskDetails').value;
+            const priority = getSelectedRadioValue('priority');
+            const eta = getSelectedRadioValue('eta');
+            const fileInput = document.getElementById('taskAttachment');
+            
+            if (!ward || !bedNo || selectedTaskTypes.length === 0 || !priority || !eta) {
+                alert('Please fill in all required fields and select at least one task');
+                return;
+            }
+            
+            // Convert ETA to minutes for consistency in display
+            let estimatedTime = 0;
+            switch(eta) {
+                case "5-10min": estimatedTime = 10; break;
+                case "10-20min": estimatedTime = 20; break;
+                case "30-60min": estimatedTime = 60; break;
+                case "1-2hrs": estimatedTime = 120; break;
+                case ">2hrs": estimatedTime = 180; break;
+                default: estimatedTime = 15;
+            }
+            
+            // Handle file attachment if present
+            let fileAttachment = null;
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                fileAttachment = {
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                    url: URL.createObjectURL(file)
+                };
+            }
+            
+            // Get patient name if available
+            const patientName = document.getElementById('patientName').value;
+            
+            // Create new task object
+            const newTask = {
+                id: Date.now(), // Use timestamp as unique ID
+                ward,
+                bedNo,
+                patientName,
+                taskTypes: [...selectedTaskTypes], // Save a copy of selected tasks in order
+                details: taskDetails,
+                priority,
+                estimatedTime,
+                completed: false,
+                createdAt: new Date(),
+                attachment: fileAttachment,
+                order: tasks.filter(t => t.priority === priority && !t.completed).length // For ordering within priority
+            };
+            
+            // Add task to array
+            tasks.push(newTask);
+            
+            // Clear form
+            taskForm.reset();
+            bedInputContainer.innerHTML = `
+                <input type="text" id="bedNo" name="bedNo" placeholder="Select ward first" class="w-full p-2 border rounded-md bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-base" disabled>
+            `;
+            
+            // Update displayed tasks
+            renderTasks();
+        });
+
+        // Function to render tasks based on filter
+        function renderTasks() {
+            const filterValue = filterPriority.value;
+            let filteredTasks = [...tasks];
+            
+            // Apply filter
+            if (filterValue !== 'all') {
+                if (filterValue === 'completed') {
+                    filteredTasks = filteredTasks.filter(task => task.completed);
+                } else {
+                    filteredTasks = filteredTasks.filter(task => task.priority === filterValue && !task.completed);
+                }
+            }
+            
+            // Sort tasks: non-completed first (by priority), then completed
+            filteredTasks.sort((a, b) => {
+                // Only move completed tasks to bottom if not specifically viewing completed tasks
+                if (filterValue !== 'completed' && a.completed !== b.completed) {
+                    return a.completed ? 1 : -1; // Completed tasks at the bottom
+                }
+                
+                const priorityOrder = { 'red': 0, 'yellow': 1, 'green': 2 };
+                if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+                    return priorityOrder[a.priority] - priorityOrder[b.priority];
+                }
+                
+                // For red tasks, sort by numeric priority if available
+                if (a.priority === 'red' && b.priority === 'red') {
+                    // If both tasks have numeric priority and they're different, sort by that
+                    if (a.numericPriority && b.numericPriority && a.numericPriority !== b.numericPriority) {
+                        return a.numericPriority - b.numericPriority;
+                    }
+                    
+                    // If only one has numeric priority, prioritize it
+                    if (a.numericPriority && a.numericPriority > 0 && (!b.numericPriority || b.numericPriority === 0)) {
+                        return -1;
+                    }
+                    if (b.numericPriority && b.numericPriority > 0 && (!a.numericPriority || a.numericPriority === 0)) {
+                        return 1;
+                    }
+                }
+                
+                return a.createdAt - b.createdAt; // Oldest first within same priority
+            });
+            
+            // Create HTML for tasks
+            if (filteredTasks.length === 0) {
+                taskContainer.innerHTML = `
+                    <div id="noTasksMessage" class="text-center py-6 text-gray-500 dark:text-gray-400">
+                        ${filterValue === 'all' ? 'No tasks added yet.' : 'No tasks match the selected filter.'}
+                    </div>
+                `;
+                return;
+            }
+            
+            // Group tasks by priority for the drag and drop functionality
+            let groupedTasks = {
+                red: filteredTasks.filter(t => t.priority === 'red' && !t.completed),
+                yellow: filteredTasks.filter(t => t.priority === 'yellow' && !t.completed),
+                green: filteredTasks.filter(t => t.priority === 'green' && !t.completed),
+                completed: filteredTasks.filter(t => t.completed)
+            };
+            
+            // Calculate total ETA for each priority
+            let etaTotals = {
+                red: groupedTasks.red.reduce((sum, task) => sum + task.estimatedTime, 0),
+                yellow: groupedTasks.yellow.reduce((sum, task) => sum + task.estimatedTime, 0),
+                green: groupedTasks.green.reduce((sum, task) => sum + task.estimatedTime, 0)
+            };
+            
+            // Update priority summary
+            const prioritySummary = document.getElementById('prioritySummary');
+            prioritySummary.innerHTML = `
+                <div class="text-xs font-medium px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">
+                    Red: ${formatTimeRange(etaTotals.red)} (${groupedTasks.red.length} tasks)
+                </div>
+                <div class="text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
+                    Yellow: ${formatTimeRange(etaTotals.yellow)} (${groupedTasks.yellow.length} tasks)
+                </div>
+                <div class="text-xs font-medium px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+                    Green: ${formatTimeRange(etaTotals.green)} (${groupedTasks.green.length} tasks)
+                </div>
+            `;
+            
+            // Show/hide drag instructions
+            document.getElementById('dragInstructions').style.display = filteredTasks.length > 0 ? 'block' : 'none';
+            
+            // Prepare container for tasks
+            let taskHTML = '';
+            
+            // Function to generate HTML for a single task
+            function generateTaskHTML(task) {
+                const priorityColors = {
+                    'red': 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-800',
+                    'yellow': 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-800',
+                    'green': 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-800'
+                };
+                
+                const priorityText = {
+                    'red': 'Urgent',
+                    'yellow': 'Medium',
+                    'green': 'Low'
+                };
+                
+                const hasAttachment = task.attachment !== null;
+                
+                return `
+                    <div id="task-${task.id}" 
+                         class="task-item p-4 border-l-4 rounded-md shadow-sm mb-3 ${task.completed ? 'bg-gray-100 dark:bg-gray-800/50 border-gray-400 dark:border-gray-600' : priorityColors[task.priority]}"
+                         draggable="${!task.completed}"
+                         data-id="${task.id}"
+                         data-priority="${task.priority}">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center space-x-3">
+                                <input type="checkbox" id="complete-${task.id}" ${task.completed ? 'checked' : ''} class="w-5 h-5 accent-primary cursor-pointer">
+                                <div>
+                                    <h3 class="font-semibold ${task.completed ? 'line-through text-gray-500 dark:text-gray-400' : ''}">
+                                        ${task.ward} - Bed ${task.bedNo}
+                                        ${task.patientName ? ' (' + task.patientName + ')' : ''}
+                                        ${!task.completed ? '<span class="text-primary cursor-move ml-2">⋮⋮</span>' : ''}
+                                    </h3>
+                                    <p class="text-sm ${task.completed ? 'line-through text-gray-500 dark:text-gray-400' : ''}">
+                                        ${task.taskTypes ? task.taskTypes.join(' → ') : task.taskType} ${task.details ? '- ' + task.details : ''}
+                                    </p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Added: ${formatDate(task.createdAt)}
+                                    </p>
+                                    ${hasAttachment ? `
+                                    <button class="view-attachment mt-2 text-xs text-primary" data-id="${task.id}">
+                                        View attachment: ${task.attachment.name}
+                                    </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs font-medium px-2 py-1 rounded-full ${task.completed ? 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300' : `bg-${task.priority}-200 dark:bg-${task.priority}-900/50 text-${task.priority}-800 dark:text-${task.priority}-300`}">
+                                    ${task.completed ? 'Completed' : priorityText[task.priority]}
+                                </span>
+                                <p class="text-xs mt-1">ETA: ${
+                                    task.estimatedTime <= 10 ? '5-10min' :
+                                    task.estimatedTime <= 20 ? '10-20min' :
+                                    task.estimatedTime <= 60 ? '30-60min' :
+                                    task.estimatedTime <= 120 ? '1-2hrs' : '>2hrs'
+                                }</p>
+                            </div>
+                        </div>
+                        <div class="mt-3 flex justify-between items-center">
+                            <div class="flex space-x-2">
+                                ${!task.completed ? `
+                                <select id="priority-${task.id}" class="text-xs p-1 border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
+                                    <option value="red" ${task.priority === 'red' ? 'selected' : ''}>Red (Urgent)</option>
+                                    <option value="yellow" ${task.priority === 'yellow' ? 'selected' : ''}>Yellow (Medium)</option>
+                                    <option value="green" ${task.priority === 'green' ? 'selected' : ''}>Green (Low)</option>
+                                </select>
+                                ${task.priority === 'red' ? `
+                                <select id="numeric-priority-${task.id}" class="text-xs p-1 border border-red-300 dark:border-red-700 rounded bg-white dark:bg-gray-700 text-red-800 dark:text-red-400">
+                                    <option value="0" ${!task.numericPriority || task.numericPriority === 0 ? 'selected' : ''}>Set Order</option>
+                                    <option value="1" ${task.numericPriority === 1 ? 'selected' : ''}>Priority #1</option>
+                                    <option value="2" ${task.numericPriority === 2 ? 'selected' : ''}>Priority #2</option>
+                                    <option value="3" ${task.numericPriority === 3 ? 'selected' : ''}>Priority #3</option>
+                                    <option value="4" ${task.numericPriority === 4 ? 'selected' : ''}>Priority #4</option>
+                                    <option value="5" ${task.numericPriority === 5 ? 'selected' : ''}>Priority #5</option>
+                                </select>
+                                ` : ''}
+                                <button class="edit-task text-xs text-primary hover:text-primary/80 border border-primary/30 px-2 py-1 rounded" data-id="${task.id}">
+                                    Edit
+                                </button>
+                                ` : ''}
+                            </div>
+                            <button class="delete-task text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300" data-id="${task.id}">
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Generate tasks for each priority group
+            if (filterValue === 'all' || filterValue === 'red') {
+                if (groupedTasks.red.length > 0) {
+                    taskHTML += `<div class="task-priority-group" data-priority="red">
+                        <h3 class="font-medium text-sm text-red-600 dark:text-red-400 mb-2">RED PRIORITY</h3>
+                        ${groupedTasks.red.map(task => generateTaskHTML(task)).join('')}
+                    </div>`;
+                }
+            }
+            
+            if (filterValue === 'all' || filterValue === 'yellow') {
+                if (groupedTasks.yellow.length > 0) {
+                    taskHTML += `<div class="task-priority-group" data-priority="yellow">
+                        <h3 class="font-medium text-sm text-yellow-600 dark:text-yellow-400 mb-2 mt-4">YELLOW PRIORITY</h3>
+                        ${groupedTasks.yellow.map(task => generateTaskHTML(task)).join('')}
+                    </div>`;
+                }
+            }
+            
+            if (filterValue === 'all' || filterValue === 'green') {
+                if (groupedTasks.green.length > 0) {
+                    taskHTML += `<div class="task-priority-group" data-priority="green">
+                        <h3 class="font-medium text-sm text-green-600 dark:text-green-400 mb-2 mt-4">GREEN PRIORITY</h3>
+                        ${groupedTasks.green.map(task => generateTaskHTML(task)).join('')}
+                    </div>`;
+                }
+            }
+            
+            if ((filterValue === 'all' || filterValue === 'completed') && groupedTasks.completed.length > 0) {
+                taskHTML += `<div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h3 class="font-medium text-sm text-gray-600 dark:text-gray-400 mb-2">COMPLETED TASKS</h3>
+                    ${groupedTasks.completed.map(task => generateTaskHTML(task)).join('')}
+                </div>`;
+            }
+            
+            if (taskHTML === '') {
+                taskHTML = `
+                    <div id="noTasksMessage" class="text-center py-6 text-gray-500 dark:text-gray-400">
+                        ${filterValue === 'all' ? 'No tasks added yet.' : 'No tasks match the selected filter.'}
+                    </div>
+                `;
+            }
+            
+            taskContainer.innerHTML = taskHTML;
+            
+            // Add event listeners to newly created elements
+            addTaskEventListeners();
+        }
+
+        // Add event listeners to task elements
+        function addTaskEventListeners() {
+            // Completion checkbox listeners
+            document.querySelectorAll('[id^="complete-"]').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const taskId = this.id.replace('complete-', '');
+                    const taskIndex = tasks.findIndex(t => t.id == taskId);
+                    
+                    if (taskIndex !== -1) {
+                        tasks[taskIndex].completed = this.checked;
+                        renderTasks();
+                    }
+                });
+            });
+            
+            // Priority change listeners
+            document.querySelectorAll('[id^="priority-"]').forEach(select => {
+                select.addEventListener('change', function() {
+                    const taskId = this.id.replace('priority-', '');
+                    const taskIndex = tasks.findIndex(t => t.id == taskId);
+                    
+                    if (taskIndex !== -1) {
+                        const oldPriority = tasks[taskIndex].priority;
+                        tasks[taskIndex].priority = this.value;
+                        
+                        // If changing to red, clear numeric priority
+                        if (this.value === 'red' && oldPriority !== 'red') {
+                            tasks[taskIndex].numericPriority = 0;
+                        }
+                        // If changing from red, clear numeric priority
+                        else if (oldPriority === 'red' && this.value !== 'red') {
+                            delete tasks[taskIndex].numericPriority;
+                        }
+                        
+                        renderTasks();
+                    }
+                });
+            });
+            
+            // Numeric priority change listeners (for red tasks)
+            document.querySelectorAll('[id^="numeric-priority-"]').forEach(select => {
+                select.addEventListener('change', function() {
+                    const taskId = this.id.replace('numeric-priority-', '');
+                    const taskIndex = tasks.findIndex(t => t.id == taskId);
+                    
+                    if (taskIndex !== -1) {
+                        tasks[taskIndex].numericPriority = parseInt(this.value, 10);
+                        renderTasks();
+                    }
+                });
+            });
+            
+            // Delete button listeners
+            document.querySelectorAll('.delete-task').forEach(button => {
+                button.addEventListener('click', function() {
+                    const taskId = this.dataset.id;
+                    tasks = tasks.filter(t => t.id != taskId);
+                    renderTasks();
+                });
+            });
+            
+            // Edit button listeners
+            document.querySelectorAll('.edit-task').forEach(button => {
+                button.addEventListener('click', function() {
+                    const taskId = this.dataset.id;
+                    const task = tasks.find(t => t.id == taskId);
+                    
+                    if (task) {
+                        // Fill the edit form with task data
+                        document.getElementById('editTaskId').value = task.id;
+                        document.getElementById('editWard').value = task.ward;
+                        document.getElementById('editBedNo').value = task.bedNo;
+                        document.getElementById('editPatientName').value = task.patientName || '';
+                        document.getElementById('editTaskDetails').value = task.details || '';
+                        
+                        // Reset editSelectedTaskTypes array
+                        editSelectedTaskTypes = [];
+                        
+                        // Clear all checkboxes first
+                        document.querySelectorAll('input[name="editTaskTypes"]').forEach(cb => {
+                            cb.checked = false;
+                        });
+                        
+                        // Check the appropriate checkboxes based on task.taskTypes
+                        if (task.taskTypes && task.taskTypes.length > 0) {
+                            // For tasks with multiple task types
+                            task.taskTypes.forEach(taskType => {
+                                const checkbox = document.getElementById(`edit-task-${taskType.toLowerCase().replace(' ', '-')}`);
+                                if (checkbox) {
+                                    checkbox.checked = true;
+                                    editSelectedTaskTypes.push(taskType);
+                                }
+                            });
+                            
+                            // Update the preview text
+                            const selectedTasksPreview = document.getElementById('editSelectedTasksPreview');
+                            selectedTasksPreview.textContent = editSelectedTaskTypes.join(' → ');
+                            document.getElementById('editTaskSelectionOrder').classList.remove('hidden');
+                        } else if (task.taskType) {
+                            // For legacy tasks with only one task type
+                            const checkbox = document.getElementById(`edit-task-${task.taskType.toLowerCase().replace(' ', '-')}`);
+                            if (checkbox) {
+                                checkbox.checked = true;
+                                editSelectedTaskTypes.push(task.taskType);
+                                
+                                // Update the preview text
+                                const selectedTasksPreview = document.getElementById('editSelectedTasksPreview');
+                                selectedTasksPreview.textContent = task.taskType;
+                                document.getElementById('editTaskSelectionOrder').classList.remove('hidden');
+                            }
+                        }
+                        
+                        // Set the priority radio button
+                        document.querySelector(`input[name="editPriority"][value="${task.priority}"]`).checked = true;
+                        
+                        // Set the ETA radio button based on estimated time
+                        let etaValue = '';
+                        if (task.estimatedTime <= 10) etaValue = '5-10min';
+                        else if (task.estimatedTime <= 20) etaValue = '10-20min';
+                        else if (task.estimatedTime <= 60) etaValue = '30-60min';
+                        else if (task.estimatedTime <= 120) etaValue = '1-2hrs';
+                        else etaValue = '>2hrs';
+                        
+                        document.querySelector(`input[name="editEta"][value="${etaValue}"]`).checked = true;
+                        
+                        // Show the edit modal
+                        document.getElementById('editTaskModal').classList.remove('hidden');
+                    }
+                });
+            });
+        }
+        
+        // Edit Task Modal functionality
+        const editTaskModal = document.getElementById('editTaskModal');
+        const editTaskForm = document.getElementById('editTaskForm');
+        const closeEditModal = document.getElementById('closeEditModal');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+        
+        // Close edit modal when clicking the X button or Cancel button
+        closeEditModal.addEventListener('click', function() {
+            editTaskModal.classList.add('hidden');
+        });
+        
+        cancelEditBtn.addEventListener('click', function() {
+            editTaskModal.classList.add('hidden');
+        });
+        
+        // Close edit modal when clicking outside of it
+        editTaskModal.addEventListener('click', function(e) {
+            if (e.target === editTaskModal) {
+                editTaskModal.classList.add('hidden');
+            }
+        });
+        
+        // Handle form submission for editing a task
+        editTaskForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const taskId = document.getElementById('editTaskId').value;
+            const ward = document.getElementById('editWard').value;
+            const bedNo = document.getElementById('editBedNo').value;
+            const patientName = document.getElementById('editPatientName').value;
+            const taskDetails = document.getElementById('editTaskDetails').value;
+            const priority = getSelectedRadioValue('editPriority');
+            const eta = getSelectedRadioValue('editEta');
+            
+            if (!ward || !bedNo || editSelectedTaskTypes.length === 0 || !priority || !eta) {
+                alert('Please fill in all required fields and select at least one task');
+                return;
+            }
+            
+            // Find the task in the array
+            const taskIndex = tasks.findIndex(t => t.id == taskId);
+            
+            if (taskIndex !== -1) {
+                // Convert ETA to minutes for consistency
+                let estimatedTime = 0;
+                switch(eta) {
+                    case "5-10min": estimatedTime = 10; break;
+                    case "10-20min": estimatedTime = 20; break;
+                    case "30-60min": estimatedTime = 60; break;
+                    case "1-2hrs": estimatedTime = 120; break;
+                    case ">2hrs": estimatedTime = 180; break;
+                    default: estimatedTime = 15;
+                }
+                
+                // Update the task with new values
+                tasks[taskIndex].ward = ward;
+                tasks[taskIndex].bedNo = bedNo;
+                tasks[taskIndex].patientName = patientName;
+                tasks[taskIndex].taskTypes = [...editSelectedTaskTypes]; // Use selected task types in order
+                tasks[taskIndex].details = taskDetails;
+                tasks[taskIndex].priority = priority;
+                tasks[taskIndex].estimatedTime = estimatedTime;
+                
+                // Close the modal and update the task list
+                editTaskModal.classList.add('hidden');
+                renderTasks();
+            }
+        });
+
+        // Filter change event listener
+        filterPriority.addEventListener('change', renderTasks);
+        
+        // Drag and drop functionality
+        let draggedTask = null;
+        
+        // Setup drag and drop event handlers for the task container
+        taskContainer.addEventListener('dragstart', function(e) {
+            const taskElement = e.target.closest('.task-item');
+            if (taskElement) {
+                draggedTask = {
+                    element: taskElement,
+                    id: taskElement.dataset.id,
+                    priority: taskElement.dataset.priority
+                };
+                
+                // Add a class for styling during drag
+                setTimeout(() => {
+                    taskElement.classList.add('opacity-50');
+                }, 0);
+            }
+        });
+        
+        taskContainer.addEventListener('dragend', function(e) {
+            const taskElement = e.target.closest('.task-item');
+            if (taskElement) {
+                taskElement.classList.remove('opacity-50');
+                draggedTask = null;
+            }
+        });
+        
+        taskContainer.addEventListener('dragover', function(e) {
+            e.preventDefault(); // Allow drop
+            
+            if (!draggedTask) return;
+            
+            const taskElement = e.target.closest('.task-item');
+            if (!taskElement) return;
+            
+            // Only allow dropping within the same priority group
+            if (taskElement.dataset.priority !== draggedTask.priority) return;
+            
+            // Get the position of the mouse relative to the task element
+            const rect = taskElement.getBoundingClientRect();
+            const mouseY = e.clientY;
+            const isBelow = mouseY > rect.top + rect.height / 2;
+            
+            // Remove any existing "drop-before" or "drop-after" classes
+            document.querySelectorAll('.drop-before, .drop-after').forEach(el => {
+                el.classList.remove('drop-before', 'drop-after');
+            });
+            
+            // Add appropriate class based on mouse position
+            if (isBelow) {
+                taskElement.classList.add('drop-after');
+            } else {
+                taskElement.classList.add('drop-before');
+            }
+        });
+        
+        taskContainer.addEventListener('dragleave', function(e) {
+            const taskElement = e.target.closest('.task-item');
+            if (taskElement) {
+                taskElement.classList.remove('drop-before', 'drop-after');
+            }
+        });
+        
+        taskContainer.addEventListener('drop', function(e) {
+            e.preventDefault();
+            
+            // Remove drop indicator classes
+            document.querySelectorAll('.drop-before, .drop-after').forEach(el => {
+                el.classList.remove('drop-before', 'drop-after');
+            });
+            
+            if (!draggedTask) return;
+            
+            const targetTaskElement = e.target.closest('.task-item');
+            if (!targetTaskElement || targetTaskElement === draggedTask.element) return;
+            
+            // Only allow dropping within the same priority group
+            if (targetTaskElement.dataset.priority !== draggedTask.priority) return;
+            
+            // Get all tasks in the same priority group
+            const priorityTasks = tasks.filter(t => t.priority === draggedTask.priority && !t.completed);
+            
+            // Find the dragged task and target task
+            const draggedTaskData = priorityTasks.find(t => t.id == draggedTask.id);
+            const targetTaskData = priorityTasks.find(t => t.id == targetTaskElement.dataset.id);
+            
+            if (!draggedTaskData || !targetTaskData) return;
+            
+            // Reorder tasks
+            const rect = targetTaskElement.getBoundingClientRect();
+            const mouseY = e.clientY;
+            const isBelow = mouseY > rect.top + rect.height / 2;
+            
+            // Get original positions
+            const draggedIndex = priorityTasks.indexOf(draggedTaskData);
+            const targetIndex = priorityTasks.indexOf(targetTaskData);
+            
+            // Remove the dragged task from its original position
+            priorityTasks.splice(draggedIndex, 1);
+            
+            // Insert at the new position
+            if (isBelow) {
+                // Insert after the target
+                priorityTasks.splice(targetIndex, 0, draggedTaskData);
+            } else {
+                // Insert before the target
+                const newIndex = targetIndex > draggedIndex ? targetIndex - 1 : targetIndex;
+                priorityTasks.splice(newIndex, 0, draggedTaskData);
+            }
+            
+            // Update order properties
+            priorityTasks.forEach((task, index) => {
+                const taskIndex = tasks.findIndex(t => t.id == task.id);
+                if (taskIndex !== -1) {
+                    tasks[taskIndex].order = index;
+                }
+            });
+            
+            // Rerender the task list
+            renderTasks();
+        });
+        
+        // Attachment viewer functionality
+        const attachmentModal = document.getElementById('attachmentModal');
+        const modalContent = document.getElementById('modalContent');
+        const modalTitle = document.getElementById('modalTitle');
+        const closeModal = document.getElementById('closeModal');
+        
+        // Close modal when clicking the X button
+        closeModal.addEventListener('click', function() {
+            attachmentModal.classList.add('hidden');
+        });
+        
+        // Close modal when clicking outside of it
+        attachmentModal.addEventListener('click', function(e) {
+            if (e.target === attachmentModal) {
+                attachmentModal.classList.add('hidden');
+            }
+        });
+        
+        // Add event listener for attachment buttons (delegated)
+        taskContainer.addEventListener('click', function(e) {
+            if (e.target.classList.contains('view-attachment')) {
+                const taskId = e.target.dataset.id;
+                const task = tasks.find(t => t.id == taskId);
+                
+                if (task && task.attachment) {
+                    modalTitle.textContent = `Attachment: ${task.attachment.name}`;
+                    
+                    // Clear previous content
+                    modalContent.innerHTML = '';
+                    
+                    // Check if it's an image
+                    if (task.attachment.type.startsWith('image/')) {
+                        const img = document.createElement('img');
+                        img.src = task.attachment.url;
+                        img.classList.add('max-w-full', 'h-auto', 'max-h-[70vh]', 'mx-auto');
+                        img.alt = task.attachment.name;
+                        modalContent.appendChild(img);
+                    } else {
+                        // For other file types, show download link
+                        const link = document.createElement('a');
+                        link.href = task.attachment.url;
+                        link.download = task.attachment.name;
+                        link.classList.add('text-primary', 'underline');
+                        link.textContent = `Download ${task.attachment.name} (${formatFileSize(task.attachment.size)})`;
+                        modalContent.appendChild(link);
+                    }
+                    
+                    // Show modal
+                    attachmentModal.classList.remove('hidden');
+                }
+            }
+        });
+        
+        // Helper function to format file size
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' bytes';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            else return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+        
+        // Add some basic styles for drag and drop
+        const style = document.createElement('style');
+        style.textContent = `
+            .task-item {
+                transition: border-color 0.2s, background-color 0.2s;
+            }
+            .task-item.opacity-50 {
+                opacity: 0.5;
+            }
+            .task-item.drop-before {
+                border-top: 2px dashed #5D5CDE;
+            }
+            .task-item.drop-after {
+                border-bottom: 2px dashed #5D5CDE;
+            }
+            .task-item[draggable=true] {
+                cursor: grab;
+            }
+            .task-item[draggable=true]:active {
+                cursor: grabbing;
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Initialize the task display
+        renderTasks();
+    </script>
+</body>
+</html>
